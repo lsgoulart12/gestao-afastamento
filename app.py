@@ -10,6 +10,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+st.markdown(
+  """
+  <style>
+  /* Força cor escura em todos os inputs, text_inputs e caixas de seleção do Streamlit */
+  div.stTextInput > div > div > input, 
+  div.stNumberInput > div > div > input,
+  div.stSelectbox > div > div > div {
+    background-color: #161b22 !important;
+    color: #ffffff !important;
+    border-color: #30363d !important;
+  }
+    
+  /* Garante visibilidade das opções selecionadas */
+  .stSelectbox span {
+    color: #ffffff !important;
+  }
+  </style>
+""",
+  unsafe_allow_html=True,
+)
+
 # --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
 DATA_FILE = "dados.json"
 
