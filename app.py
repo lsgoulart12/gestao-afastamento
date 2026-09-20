@@ -35,6 +35,12 @@ st.markdown(
         --background-color: {tema_background};
         --secondary-background-color: {tema_surface};
         --text-color: {tema_text};
+      --form-background: #ffffff;
+      --form-text: #000000;
+      --form-placeholder: #555555;
+      --form-border: #d1d5db;
+      --form-border-hover: #9ca3af;
+      --form-focus: #2563eb;
     }}
 
     .stApp {{
@@ -42,50 +48,118 @@ st.markdown(
         color: {tema_text};
     }}
 
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div,
-    input, select, textarea {{
-        background-color: {tema_surface} !important;
-        color: {tema_text} !important;
-        -webkit-text-fill-color: {tema_text} !important;
-        border-color: {tema_border} !important;
+    /* BaseWeb e widgets Streamlit: todos os campos permanecem brancos */
+    [data-testid="stTextInput"] input,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stDateInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-baseweb="input"] input,
+    [data-baseweb="input"] > div,
+    [data-baseweb="select"] > div,
+    [role="combobox"],
+    [data-testid="stMultiSelect"] [data-baseweb="select"],
+    [data-testid="stRadio"] label,
+    [data-testid="stCheckbox"] label,
+    [data-testid="stButton"] button,
+    [data-testid="stFormSubmitButton"] button {{
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+      border: 1px solid #d1d5db !important;
+      border-radius: 8px !important;
+      opacity: 1 !important;
     }}
 
-    label, .stMarkdown, [data-testid="stWidgetLabel"] p {{
-        color: {tema_text} !important;
+    /* Labels são independentes do texto nativo do tema e sempre têm contraste alto */
+    [data-testid="stWidgetLabel"] p,
+    [data-testid="stWidgetLabel"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stSelectbox"] label,
+    [data-testid="stDateInput"] label,
+    [data-testid="stTextArea"] label,
+    [data-testid="stMultiSelect"] label,
+    [data-testid="stRadio"] label,
+    [data-testid="stCheckbox"] label,
+    div[data-testid="stForm"] label p {{
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 16px !important;
+      line-height: 1.4 !important;
+      opacity: 1 !important;
+      text-shadow: none !important;
+    }}
+
+    input::placeholder,
+    textarea::placeholder {{
+      color: #555555 !important;
+      -webkit-text-fill-color: #555555 !important;
+      opacity: 1 !important;
+    }}
+
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] input,
+    [data-baseweb="select"] svg,
+    [role="combobox"] span {{
+      color: #000000 !important;
+      fill: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+    }}
+
+    [data-testid="stTextInput"]:hover input,
+    [data-testid="stNumberInput"]:hover input,
+    [data-testid="stDateInput"]:hover input,
+    [data-testid="stTextArea"]:hover textarea,
+    [data-baseweb="input"]:hover > div,
+    [data-baseweb="select"]:hover > div,
+    [data-testid="stButton"] button:hover,
+    [data-testid="stFormSubmitButton"] button:hover {{
+      border-color: #9ca3af !important;
+    }}
+
+    [data-testid="stTextInput"]:focus-within input,
+    [data-testid="stNumberInput"]:focus-within input,
+    [data-testid="stDateInput"]:focus-within input,
+    [data-testid="stTextArea"]:focus-within textarea,
+    [data-baseweb="input"]:focus-within > div,
+    [data-baseweb="select"]:focus-within > div,
+    [role="combobox"]:focus,
+    [data-testid="stButton"] button:focus,
+    [data-testid="stFormSubmitButton"] button:focus {{
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 1px #2563eb !important;
+      outline: none !important;
+    }}
+
+    [data-baseweb="menu"],
+    [data-baseweb="popover"],
+    [role="listbox"],
+    [role="option"] {{
+      background-color: #ffffff !important;
+      color: #000000 !important;
+    }}
+
+    [role="option"] span,
+    [role="option"]:hover,
+    [role="option"][aria-selected="true"] {{
+      color: #000000 !important;
+    }}
+
+    @media (max-width: 768px) {{
+      [data-testid="stWidgetLabel"] p,
+      [data-testid="stWidgetLabel"] label {{
+        font-size: 16px !important;
+      }}
+
+      input, select, textarea,
+      [data-testid="stButton"] button,
+      [data-testid="stFormSubmitButton"] button {{
+        min-height: 48px !important;
+        font-size: 16px !important;
+      }}
     }}
     </style>
     """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <style>
-    /* Força as variáveis nativas de cor de fundo dos inputs e selects no Streamlit */
-    :root {
-        --background-color: #0e1117;
-        --secondary-background-color: #161b22;
-        --text-color: #ffffff;
-    }
-
-    /* Sobrescreve diretamente qualquer container de input e selectbox */
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div,
-    input, select, textarea {
-        background-color: #161b22 !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        border-color: #30363d !important;
-    }
-
-    /* Garante cor correta para o texto selecionado e ícones */
-    div[data-baseweb="select"] span, div[data-baseweb="select"] svg {
-        color: #ffffff !important;
-        fill: #ffffff !important;
-    }
-    </style>
-""",
     unsafe_allow_html=True,
 )
 
@@ -99,7 +173,7 @@ st.markdown(
     .stNumberInput label, 
     .stDateInput label,
     label {
-      color: var(--text-color) !important;
+        color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 1.1rem !important;
     }
