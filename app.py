@@ -1,4 +1,5 @@
 import json
+import html
 import os
 from datetime import datetime, timedelta
 import streamlit as st
@@ -8,6 +9,54 @@ st.set_page_config(
     page_title="Sistema de Gestão de Afastamentos",
     layout="wide",
     initial_sidebar_state="collapsed",
+)
+
+if "tema" not in st.session_state:
+  st.session_state.tema = "Escuro"
+
+tema = st.sidebar.radio("Tema", ["Claro", "Escuro"], index=1 if st.session_state.tema == "Escuro" else 0)
+st.session_state.tema = tema
+
+if tema == "Escuro":
+  tema_background = "#0e1117"
+  tema_surface = "#161b22"
+  tema_text = "#ffffff"
+  tema_border = "#30363d"
+else:
+  tema_background = "#f8fafc"
+  tema_surface = "#ffffff"
+  tema_text = "#1f2937"
+  tema_border = "#9ca3af"
+
+st.markdown(
+    f"""
+    <style>
+    :root {{
+        --background-color: {tema_background};
+        --secondary-background-color: {tema_surface};
+        --text-color: {tema_text};
+    }}
+
+    .stApp {{
+        background-color: {tema_background};
+        color: {tema_text};
+    }}
+
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div,
+    input, select, textarea {{
+        background-color: {tema_surface} !important;
+        color: {tema_text} !important;
+        -webkit-text-fill-color: {tema_text} !important;
+        border-color: {tema_border} !important;
+    }}
+
+    label, .stMarkdown, [data-testid="stWidgetLabel"] p {{
+        color: {tema_text} !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.markdown(
@@ -50,9 +99,14 @@ st.markdown(
     .stNumberInput label, 
     .stDateInput label,
     label {
-        color: #ffffff !important;
+      color: var(--text-color) !important;
         font-weight: 700 !important;
         font-size: 1.1rem !important;
+    }
+
+    [data-testid="stMarkdownContainer"] div[style*="background-color: #161b22"] {
+      background-color: var(--secondary-background-color) !important;
+      border-color: var(--secondary-background-color) !important;
     }
     </style>
 """,
@@ -61,14 +115,18 @@ st.markdown(
 
 # --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
 DATA_FILE = "dados.json"
+MAX_TEXT_LENGTH = 200
 
 
 def carregar_dados():
   if os.path.exists(DATA_FILE):
     try:
       with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-    except json.JSONDecodeError:
+        dados = json.load(f)
+        if not isinstance(dados, list):
+          return []
+        return [registro for registro in dados if isinstance(registro, dict)]
+    except (OSError, json.JSONDecodeError, TypeError):
       return []
   return []
 
@@ -131,7 +189,15 @@ with col_form:
     submitted = st.form_submit_button("Salvar Registro")
 
     if submitted:
-      if matricula and nome:
+      matricula = matricula.strip()
+      nome = nome.strip()
+      produto = produto.strip()
+
+      if not matricula or not nome:
+        st.error("Preencha ao menos a Matrícula e o Nome do colaborador.")
+      elif any(len(valor) > MAX_TEXT_LENGTH for valor in (matricula, nome, produto)):
+        st.error(f"Os campos de texto devem ter no máximo {MAX_TEXT_LENGTH} caracteres.")
+      else:
         novo_registro = {
             "matricula": matricula,
             "nome": nome,
@@ -141,12 +207,14 @@ with col_form:
             "classificacao": classificacao,
             "data_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        st.session_state.registros.append(novo_registro)
-        salvar_dados(st.session_state.registros)
-        st.success("Registro salvo com sucesso!")
-        st.rerun()
-      else:
-        st.error("Preencha ao menos a Matrícula e o Nome do colaborador.")
+        try:
+          registros_atualizados = [*st.session_state.registros, novo_registro]
+          salvar_dados(registros_atualizados)
+          st.session_state.registros = registros_atualizados
+          st.success("Registro salvo com sucesso!")
+          st.rerun()
+        except (OSError, TypeError, ValueError):
+          st.error("Não foi possível salvar o registro. Tente novamente.")
 
 with col_monitor:
   st.markdown("### Monitoramento Ativo de Afastados")
@@ -188,12 +256,20 @@ with col_monitor:
       for reg in reversed(registros_filtrados):
         # Cálculo de retorno
         try:
-          data_reg = datetime.strptime(reg["data_registro"], "%Y-%m-%d %H:%M:%S")
+          data_reg = datetime.strptime(str(reg["data_registro"]), "%Y-%m-%d %H:%M:%S")
           dias_af = int(reg["dias"])
           data_retorno = data_reg + timedelta(days=dias_af)
           dias_restantes = (data_retorno - datetime.now()).days
-        except Exception:
+        except (KeyError, TypeError, ValueError, OverflowError):
           dias_restantes = 0
+
+        matricula_exibicao = html.escape(str(reg.get("matricula", "N/D")))
+        nome_exibicao = html.escape(str(reg.get("nome", "N/D")))
+        produto_exibicao = html.escape(str(reg.get("produto", "N/D")))
+        modulo_exibicao = html.escape(str(reg.get("modulo", "N/D")))
+        dias_exibicao = html.escape(str(reg.get("dias", "N/D")))
+        classificacao_exibicao = html.escape(str(reg.get("classificacao", "N/D")))
+        data_exibicao = html.escape(str(reg.get("data_registro", "N/D")))
 
         # Alerta visual baseado no prazo (mantendo apenas os dois ícones essenciais de status)
         if dias_restantes <= 1:
@@ -206,11 +282,11 @@ with col_monitor:
         st.markdown(
             f"""
             <div style="background-color: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 15px; {borda_cor}">
-                <strong>Matrícula:</strong> {reg['matricula']} | <strong>Colaborador:</strong> {reg['nome']}<br>
-                <strong>Produto:</strong> {reg.get('produto', 'N/D')} | <strong>Local:</strong> {reg['modulo']}<br>
-                <strong>Tempo de Afastamento:</strong> {reg['dias']} dia(s) | <strong>Classificação:</strong> {reg['classificacao']}<br>
+                <strong>Matrícula:</strong> {matricula_exibicao} | <strong>Colaborador:</strong> {nome_exibicao}<br>
+                <strong>Produto:</strong> {produto_exibicao} | <strong>Local:</strong> {modulo_exibicao}<br>
+                <strong>Tempo de Afastamento:</strong> {dias_exibicao} dia(s) | <strong>Classificação:</strong> {classificacao_exibicao}<br>
                 <div style="margin-top: 8px; font-weight: bold; color: #ffcccc;">{status_msg}</div>
-                <div style="font-size: 0.8rem; color: #8b949e; margin-top: 5px;">Registrado em: {reg['data_registro']} • Protocolo de Acolhimento Ativo (LGPD Compliant)</div>
+                <div style="font-size: 0.8rem; color: #8b949e; margin-top: 5px;">Registrado em: {data_exibicao} • Protocolo de Acolhimento Ativo (LGPD Compliant)</div>
             </div>
             """,
             unsafe_allow_html=True,

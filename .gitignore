@@ -1,0 +1,21 @@
+# Python cache and tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+*.temp
+
+# Local data exports and backups
+*.bak
