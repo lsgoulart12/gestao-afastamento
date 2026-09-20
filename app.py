@@ -40,6 +40,25 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    """
+    <style>
+    /* Força os títulos/rótulos acima dos boxes a ficarem em branco puro e alto contraste */
+    div[data-testid="stForm"] label p, 
+    .stTextInput label, 
+    .stSelectbox label, 
+    .stNumberInput label, 
+    .stDateInput label,
+    label {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
 # --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
 DATA_FILE = "dados.json"
 
