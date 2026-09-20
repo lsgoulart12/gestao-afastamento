@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 if "tema" not in st.session_state:
-  st.session_state.tema = "Escuro"
+  st.session_state.tema = "Escuro","claro"
 
 tema = st.sidebar.radio("Tema", ["Claro", "Escuro"], index=1 if st.session_state.tema == "Escuro" else 0)
 st.session_state.tema = tema
@@ -183,6 +183,54 @@ st.markdown(
     </style>
 """,
     unsafe_allow_html=True,
+)
+
+st.markdown(
+  f"""
+  <style>
+  .stApp {{
+    background-color: {tema_background} !important;
+    color: {tema_text} !important;
+  }}
+
+  /* Seletor definitivo de alta especificidade para os rótulos */
+  .stTextInput label,
+  .stSelectbox label,
+  .stNumberInput label,
+  .stDateInput label,
+  div[data-baseweb="input"] label,
+  div[data-baseweb="select"] label,
+  label {{
+    color: #0066FF !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+  }}
+
+  /* Força também nos parágrafos internos caso o Streamlit aninhe elementos */
+  .stTextInput label p,
+  .stSelectbox label p,
+  .stNumberInput label p,
+  .stDateInput label p,
+  label p {{
+    color: #0066FF !important;
+    font-weight: 700 !important;
+  }}
+
+  /* Inputs e Selectboxes com fundo dinâmico */
+  div[data-baseweb="input"] > div,
+  div[data-baseweb="select"] > div,
+  input, select {{
+    background-color: {tema_surface} !important;
+    color: {tema_text} !important;
+    border-color: {tema_border} !important;
+  }}
+
+  div[data-baseweb="select"] span {{
+    color: {tema_text} !important;
+  }}
+  </style>
+  """,
+  unsafe_allow_html=True,
 )
 
 # --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
