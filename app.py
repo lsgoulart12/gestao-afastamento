@@ -36,6 +36,61 @@ st.markdown(
         border: 1px solid #484f58 !important;
         border-radius: 6px !important;
     }
+
+    /* Força o tema escuro nos elementos internos do Streamlit e BaseWeb */
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] [role="combobox"],
+    div[role="combobox"],
+    div[role="combobox"] > div,
+    div.stTextInput input,
+    div.stNumberInput input,
+    div.stTextArea textarea {
+      background-color: #161b22 !important;
+      color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
+      border-color: #484f58 !important;
+    }
+
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] svg,
+    div[role="combobox"] input {
+      color: #ffffff !important;
+      fill: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
+    }
+
+    div[data-baseweb="select"]:focus-within,
+    div[role="combobox"]:focus-within,
+    div.stTextInput input:focus,
+    div.stNumberInput input:focus,
+    div.stTextArea textarea:focus {
+      background-color: #161b22 !important;
+      color: #ffffff !important;
+      border-color: #8b949e !important;
+      box-shadow: 0 0 0 1px #8b949e !important;
+    }
+
+    /* O menu do select pode ser renderizado fora do container original */
+    div[data-baseweb="menu"],
+    div[data-baseweb="popover"],
+    div[role="listbox"],
+    div[role="option"] {
+      background-color: #161b22 !important;
+      color: #ffffff !important;
+    }
+
+    div[role="option"]:hover,
+    div[role="option"][aria-selected="true"] {
+      background-color: #30363d !important;
+      color: #ffffff !important;
+    }
+
+    /* Mantém disponível o controle nativo de tema do Streamlit */
+    header,
+    [data-testid="stToolbar"] {
+      visibility: visible !important;
+    }
     
     /* Cor do texto dentro dos menus suspensos e opções */
     .stSelectbox div[data-baseweb="select"] > div {
