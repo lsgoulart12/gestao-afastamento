@@ -166,16 +166,14 @@ st.markdown(
 st.markdown(
     """
     <style>
-    /* Força os títulos/rótulos acima dos boxes a ficarem em branco puro e alto contraste */
-    div[data-testid="stForm"] label p, 
-    .stTextInput label, 
-    .stSelectbox label, 
-    .stNumberInput label, 
-    .stDateInput label,
-    label {
-        color: #ffffff !important;
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
+    /* Alvo real dos labels dos widgets no Streamlit 1.58.0 */
+    label[data-testid="stWidgetLabel"],
+    label[data-testid="stWidgetLabel"] p,
+    div[data-testid="stForm"] label[data-testid="stWidgetLabel"] p {
+      color: #0066FF !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      opacity: 1 !important;
     }
 
     [data-testid="stMarkdownContainer"] div[style*="background-color: #161b22"] {
