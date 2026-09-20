@@ -11,24 +11,33 @@ st.set_page_config(
 )
 
 st.markdown(
-  """
-  <style>
-  /* Força cor escura em todos os inputs, text_inputs e caixas de seleção do Streamlit */
-  div.stTextInput > div > div > input, 
-  div.stNumberInput > div > div > input,
-  div.stSelectbox > div > div > div {
-    background-color: #161b22 !important;
-    color: #ffffff !important;
-    border-color: #30363d !important;
-  }
-    
-  /* Garante visibilidade das opções selecionadas */
-  .stSelectbox span {
-    color: #ffffff !important;
-  }
-  </style>
+    """
+    <style>
+    /* Força as variáveis nativas de cor de fundo dos inputs e selects no Streamlit */
+    :root {
+        --background-color: #0e1117;
+        --secondary-background-color: #161b22;
+        --text-color: #ffffff;
+    }
+
+    /* Sobrescreve diretamente qualquer container de input e selectbox */
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div,
+    input, select, textarea {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        border-color: #30363d !important;
+    }
+
+    /* Garante cor correta para o texto selecionado e ícones */
+    div[data-baseweb="select"] span, div[data-baseweb="select"] svg {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+    </style>
 """,
-  unsafe_allow_html=True,
+    unsafe_allow_html=True,
 )
 
 # --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
