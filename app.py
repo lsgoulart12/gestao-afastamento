@@ -10,107 +10,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- CSS CUSTOMIZADO (ALTO CONTRASTE E ACESSIBILIDADE NO MODO ESCURO) ---
-st.markdown(
-    """
-    <style>
-    /* Fundo geral da aplicação */
-    .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
-    }
-    
-    /* Rótulos (labels) acima das caixas com cor branca forte para facilitar a leitura */
-    .stTextInput label, .stSelectbox label, .stNumberInput label {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        font-size: 1.05rem !important;
-    }
-    
-    /* Fundo escuro elegante e borda nítida para as caixas de input e selectbox */
-    div.stTextInput > div > div > input, 
-    div.stSelectbox > div > div > div, 
-    div.stNumberInput > div > div > input {
-        background-color: #161b22 !important;
-        color: #ffffff !important;
-        border: 1px solid #484f58 !important;
-        border-radius: 6px !important;
-    }
-
-    /* Força o tema escuro nos elementos internos do Streamlit e BaseWeb */
-    div[data-baseweb="select"],
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] [role="combobox"],
-    div[role="combobox"],
-    div[role="combobox"] > div,
-    div.stTextInput input,
-    div.stNumberInput input,
-    div.stTextArea textarea {
-      background-color: #161b22 !important;
-      color: #ffffff !important;
-      -webkit-text-fill-color: #ffffff !important;
-      border-color: #484f58 !important;
-    }
-
-    div[data-baseweb="select"] input,
-    div[data-baseweb="select"] svg,
-    div[role="combobox"] input {
-      color: #ffffff !important;
-      fill: #ffffff !important;
-      -webkit-text-fill-color: #ffffff !important;
-    }
-
-    div[data-baseweb="select"]:focus-within,
-    div[role="combobox"]:focus-within,
-    div.stTextInput input:focus,
-    div.stNumberInput input:focus,
-    div.stTextArea textarea:focus {
-      background-color: #161b22 !important;
-      color: #ffffff !important;
-      border-color: #8b949e !important;
-      box-shadow: 0 0 0 1px #8b949e !important;
-    }
-
-    /* O menu do select pode ser renderizado fora do container original */
-    div[data-baseweb="menu"],
-    div[data-baseweb="popover"],
-    div[role="listbox"],
-    div[role="option"] {
-      background-color: #161b22 !important;
-      color: #ffffff !important;
-    }
-
-    div[role="option"]:hover,
-    div[role="option"][aria-selected="true"] {
-      background-color: #30363d !important;
-      color: #ffffff !important;
-    }
-
-    /* Mantém disponível o controle nativo de tema do Streamlit */
-    header,
-    [data-testid="stToolbar"] {
-      visibility: visible !important;
-    }
-    
-    /* Cor do texto dentro dos menus suspensos e opções */
-    .stSelectbox div[data-baseweb="select"] > div {
-        background-color: #161b22 !important;
-        color: #ffffff !important;
-    }
-    
-    /* Estilização dos cartões de alerta e status */
-    .metric-card {
-        background-color: #161b22;
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px solid #30363d;
-        margin-bottom: 15px;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
 # --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
 DATA_FILE = "dados.json"
 
@@ -136,12 +35,11 @@ if "registros" not in st.session_state:
 
 # --- CABEÇALHO DO SISTEMA ---
 st.markdown(
-    "<h1 style='text-align: center; color: #ffffff;'>Sistema de Gestão de"
-    " Afastamentos</h1>",
+    "<h1 style='text-align: center;'>Sistema de Gestão de Afastamentos</h1>",
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<p style='text-align: center; color: #c9d1d9;'>Painel executivo para"
+    "<p style='text-align: center; color: #8b949e;'>Painel executivo para"
     " controle operacional, conformidade de afastamentos e acolhimento.</p>",
     unsafe_allow_html=True,
 )
@@ -258,7 +156,7 @@ with col_monitor:
 
         st.markdown(
             f"""
-            <div class="metric-card" style="{borda_cor}">
+            <div style="background-color: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 15px; {borda_cor}">
                 <strong>Matrícula:</strong> {reg['matricula']} | <strong>Colaborador:</strong> {reg['nome']}<br>
                 <strong>Produto:</strong> {reg.get('produto', 'N/D')} | <strong>Local:</strong> {reg['modulo']}<br>
                 <strong>Tempo de Afastamento:</strong> {reg['dias']} dia(s) | <strong>Classificação:</strong> {reg['classificacao']}<br>

@@ -1,7 +1,6 @@
-config.toml
 [theme]
 base="dark"
-primaryColor="#4f46e5"
+primaryColor="#2563eb"
 backgroundColor="#0e1117"
 secondaryBackgroundColor="#161b22"
 textColor="#ffffff"
