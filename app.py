@@ -2,7 +2,21 @@ import json
 import html
 import os
 from datetime import datetime, timedelta
+from PIL import Image, ImageDraw, ImageOps
 import streamlit as st
+
+
+def preparar_logo_redonda(caminho_imagem, tamanho=(180, 180)):
+  try:
+    imagem = Image.open(caminho_imagem).convert("RGBA")
+    imagem = ImageOps.fit(imagem, tamanho, Image.Resampling.LANCZOS)
+    mascara = Image.new("L", tamanho, 0)
+    ImageDraw.Draw(mascara).ellipse((0, 0, tamanho[0], tamanho[1]), fill=255)
+    resultado = Image.new("RGBA", tamanho, (0, 0, 0, 0))
+    resultado.paste(imagem, (0, 0), mask=mascara)
+    return resultado
+  except (OSError, ValueError):
+    return caminho_imagem
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -211,6 +225,7 @@ st.markdown(
   .stSelectbox label p,
   .stNumberInput label p,
   .stDateInput label p,
+  div[data-testid="stForm"] label[data-testid="stWidgetLabel"] p,
   label p {{
     color: #0066FF !important;
     font-weight: 700 !important;
@@ -261,8 +276,12 @@ if "registros" not in st.session_state:
   st.session_state.registros = carregar_dados()
 
 # --- CABEÇALHO DO SISTEMA ---
+col_logo_esquerda, col_logo_centro, col_logo_direita = st.columns([1, 2, 1])
+with col_logo_centro:
+  st.image(preparar_logo_redonda("39147.jpg"), width=140)
 st.markdown(
-    "<h1 style='text-align: center;'>Sistema de Gestão de Afastamentos</h1>",
+    "<h1 style='text-align: center; color: #0066FF; font-size: 1.4rem; "
+    "font-weight: 700; margin-top: -10px;'>Sistema de Gestão de Afastamentos</h1>",
     unsafe_allow_html=True,
 )
 st.markdown(
