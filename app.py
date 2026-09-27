@@ -1,516 +1,406 @@
 import json
-import html
 import os
-from datetime import datetime, timedelta
-from PIL import Image, ImageDraw, ImageOps
-import streamlit as st
-from zoneinfo import ZoneInfo
+import secrets
+import tempfile
+import uuid
+from datetime import date, datetime, timedelta
+from functools import wraps
 
+import pytz
+from flask import Flask, redirect, render_template, request, session, url_for
 
-FUSO_BR = ZoneInfo("America/Sao_Paulo")
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+TEMPLATES_DIR = os.path.join(BASEDIR, "templates")
+STATIC_DIR = os.path.join(BASEDIR, "static")
+DATA_FILE = os.path.join(BASEDIR, "dados.json")
 
+app = Flask(
+    __name__,
+    template_folder=TEMPLATES_DIR,
+    static_folder=STATIC_DIR,
+)
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 
-def preparar_logo_redonda(caminho_imagem, tamanho=(180, 180)):
-  try:
-    imagem = Image.open(caminho_imagem).convert("RGBA")
-    imagem = ImageOps.fit(imagem, tamanho, Image.Resampling.LANCZOS)
-    mascara = Image.new("L", tamanho, 0)
-    ImageDraw.Draw(mascara).ellipse((0, 0, tamanho[0], tamanho[1]), fill=255)
-    resultado = Image.new("RGBA", tamanho, (0, 0, 0, 0))
-    resultado.paste(imagem, (0, 0), mask=mascara)
-    return resultado
-  except (OSError, ValueError):
-    return caminho_imagem
-
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="Sistema de Gestão de Afastamentos",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+FUSO_RIO = pytz.timezone("America/Sao_Paulo")
+CENTROS_CUSTO = (
+    "MG1 ABCD",
+    "MG2 EF",
+    "MG3 HIJL",
+    "MG4 MKL",
+    "CC1",
+    "CC2",
+    "CC3",
+)
+ALOCACOES = (
+    "MG1 - Estúdio A",
+    "MG1 - Estúdio B",
+    "MG1 - Estúdio C",
+    "MG1 - Estúdio D",
+    "MG2 - Estúdio E",
+    "MG2 - Estúdio F",
+    "MG3 - Estúdio H",
+    "MG3 - Estúdio I",
+    "MG3 - Estúdio J",
+    "MG3 - Estúdio L",
+    "MG4 - Estúdio M",
+    "MG4 - Estúdio K",
+    "MG4 - Estúdio L",
+    "CC1",
+    "CC2",
+    "CC3",
+)
+TIPOS_AFASTAMENTO = (
+    "Atestado médico",
+    "Acidente de trabalho",
+    "Licença maternidade",
+    "Licença paternidade",
+    "Outro afastamento",
 )
 
-if "tema" not in st.session_state:
-  st.session_state.tema = "Escuro","claro"
 
-tema = st.sidebar.radio("Tema", ["Claro", "Escuro"], index=1 if st.session_state.tema == "Escuro" else 0)
-st.session_state.tema = tema
-
-if tema == "Escuro":
-  tema_background = "#0f172a"
-  tema_surface = "rgba(15, 23, 42, 0.85)"
-  tema_text = "#f8fafc"
-  tema_border = "#334155"
-else:
-  tema_background = "#f8fafc"
-  tema_surface = "#ffffff"
-  tema_text = "#1f2937"
-  tema_border = "#9ca3af"
-
-st.markdown(
-    f"""
-    <style>
-    :root {{
-        --background-color: {tema_background};
-        --secondary-background-color: {tema_surface};
-        --text-color: {tema_text};
-      --accent-color: #2563eb;
-      --border-color: {tema_border};
-      --form-surface: {tema_surface};
-      --form-background: #ffffff;
-      --form-text: #000000;
-      --form-placeholder: #555555;
-      --form-border: #d1d5db;
-      --form-border-hover: #9ca3af;
-      --form-focus: #2563eb;
-    }}
-
-    .stApp {{
-        background-color: {tema_background};
-        color: {tema_text};
-    }}
-
-    /* BaseWeb e widgets Streamlit: todos os campos permanecem brancos */
-    [data-testid="stTextInput"] input,
-    [data-testid="stNumberInput"] input,
-    [data-testid="stDateInput"] input,
-    [data-testid="stTextArea"] textarea,
-    [data-baseweb="input"] input,
-    [data-baseweb="input"] > div,
-    [data-baseweb="select"] > div,
-    [role="combobox"],
-    [data-testid="stMultiSelect"] [data-baseweb="select"],
-    [data-testid="stRadio"] label,
-    [data-testid="stCheckbox"] label,
-    [data-testid="stButton"] button,
-    [data-testid="stFormSubmitButton"] button {{
-      background-color: #ffffff !important;
-      color: #000000 !important;
-      -webkit-text-fill-color: #000000 !important;
-      border: 1px solid #d1d5db !important;
-      border-radius: 8px !important;
-      opacity: 1 !important;
-    }}
-
-    /* Labels são independentes do texto nativo do tema e sempre têm contraste alto */
-    [data-testid="stWidgetLabel"] p,
-    [data-testid="stWidgetLabel"] label,
-    [data-testid="stTextInput"] label,
-    [data-testid="stNumberInput"] label,
-    [data-testid="stSelectbox"] label,
-    [data-testid="stDateInput"] label,
-    [data-testid="stTextArea"] label,
-    [data-testid="stMultiSelect"] label,
-    [data-testid="stRadio"] label,
-    [data-testid="stCheckbox"] label,
-    div[data-testid="stForm"] label p {{
-      color: #ffffff !important;
-      font-weight: 700 !important;
-      font-size: 16px !important;
-      line-height: 1.4 !important;
-      opacity: 1 !important;
-      text-shadow: none !important;
-    }}
-
-    input::placeholder,
-    textarea::placeholder {{
-      color: #555555 !important;
-      -webkit-text-fill-color: #555555 !important;
-      opacity: 1 !important;
-    }}
-
-    [data-baseweb="select"] span,
-    [data-baseweb="select"] input,
-    [data-baseweb="select"] svg,
-    [role="combobox"] span {{
-      color: #000000 !important;
-      fill: #000000 !important;
-      -webkit-text-fill-color: #000000 !important;
-    }}
-
-    [data-testid="stTextInput"]:hover input,
-    [data-testid="stNumberInput"]:hover input,
-    [data-testid="stDateInput"]:hover input,
-    [data-testid="stTextArea"]:hover textarea,
-    [data-baseweb="input"]:hover > div,
-    [data-baseweb="select"]:hover > div,
-    [data-testid="stButton"] button:hover,
-    [data-testid="stFormSubmitButton"] button:hover {{
-      border-color: #9ca3af !important;
-    }}
-
-    [data-testid="stTextInput"]:focus-within input,
-    [data-testid="stNumberInput"]:focus-within input,
-    [data-testid="stDateInput"]:focus-within input,
-    [data-testid="stTextArea"]:focus-within textarea,
-    [data-baseweb="input"]:focus-within > div,
-    [data-baseweb="select"]:focus-within > div,
-    [role="combobox"]:focus,
-    [data-testid="stButton"] button:focus,
-    [data-testid="stFormSubmitButton"] button:focus {{
-      border-color: #2563eb !important;
-      box-shadow: 0 0 0 1px #2563eb !important;
-      outline: none !important;
-    }}
-
-    [data-baseweb="menu"],
-    [data-baseweb="popover"],
-    [role="listbox"],
-    [role="option"] {{
-      background-color: #ffffff !important;
-      color: #000000 !important;
-    }}
-
-    [role="option"] span,
-    [role="option"]:hover,
-    [role="option"][aria-selected="true"] {{
-      color: #000000 !important;
-    }}
-
-    @media (max-width: 768px) {{
-      [data-testid="stWidgetLabel"] p,
-      [data-testid="stWidgetLabel"] label {{
-        font-size: 16px !important;
-      }}
-
-      input, select, textarea,
-      [data-testid="stButton"] button,
-      [data-testid="stFormSubmitButton"] button {{
-        min-height: 48px !important;
-        font-size: 16px !important;
-      }}
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <style>
-    /* Alvo real dos labels dos widgets no Streamlit 1.58.0 */
-    label[data-testid="stWidgetLabel"],
-    label[data-testid="stWidgetLabel"] p,
-    div[data-testid="stForm"] label[data-testid="stWidgetLabel"] p {
-      color: #0066FF !important;
-      font-size: 16px !important;
-      font-weight: 700 !important;
-      opacity: 1 !important;
-    }
-
-    [data-testid="stMarkdownContainer"] div[style*="background-color: #161b22"] {
-      background-color: var(--secondary-background-color) !important;
-      border-color: var(--secondary-background-color) !important;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-  f"""
-  <style>
-  .stApp {{
-    background-color: {tema_background} !important;
-    color: {tema_text} !important;
-  }}
-
-  /* Seletor definitivo de alta especificidade para os rótulos */
-  .stTextInput label,
-  .stSelectbox label,
-  .stNumberInput label,
-  .stDateInput label,
-  div[data-baseweb="input"] label,
-  div[data-baseweb="select"] label,
-  label {{
-    color: #0066FF !important;
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
-  }}
-
-  /* Força também nos parágrafos internos caso o Streamlit aninhe elementos */
-  .stTextInput label p,
-  .stSelectbox label p,
-  .stNumberInput label p,
-  .stDateInput label p,
-  div[data-testid="stForm"] label[data-testid="stWidgetLabel"] p,
-  label p {{
-    color: #0066FF !important;
-    font-weight: 700 !important;
-  }}
-
-  /* Inputs e Selectboxes com fundo dinâmico */
-  div[data-baseweb="input"] > div,
-  div[data-baseweb="select"] > div,
-  input, select {{
-    background-color: {tema_surface} !important;
-    color: {tema_text} !important;
-    border-color: {tema_border} !important;
-  }}
-
-  div[data-baseweb="select"] span {{
-    color: {tema_text} !important;
-  }}
-
-  .stApp {{
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  }}
-
-  div[data-testid="stForm"] {{
-    background: var(--form-surface);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1rem;
-  }}
-
-  h1, h2 {{
-    font-weight: 600;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 10px;
-  }}
-
-  [data-testid="stFormSubmitButton"] button {{
-    background-color: var(--accent-color) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border: none !important;
-    border-radius: 4px !important;
-    font-weight: 600 !important;
-  }}
-
-  [data-testid="stFormSubmitButton"] button:hover {{
-    background-color: #1d4ed8 !important;
-  }}
-  </style>
-  """,
-  unsafe_allow_html=True,
-)
-
-# --- ARQUIVO DE PERSISTÊNCIA LOCAL ---
-DATA_FILE = "dados.json"
-MAX_TEXT_LENGTH = 200
+class DadosInvalidosError(ValueError):
+    """Indica que o arquivo de persistência não contém uma lista de registros."""
 
 
-def carregar_dados():
-  if os.path.exists(DATA_FILE):
+def requer_autenticacao(view):
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not session.get("autenticado"):
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+
+    return wrapper
+
+
+def carregar_registros():
+    """Lê o JSON sem modificar o arquivo original em caso de erro."""
+    if not os.path.exists(DATA_FILE):
+        return []
+
     try:
-      with open(DATA_FILE, "r", encoding="utf-8") as f:
-        dados = json.load(f)
-        if not isinstance(dados, list):
-          return []
-        return [registro for registro in dados if isinstance(registro, dict)]
-    except (OSError, json.JSONDecodeError, TypeError):
-      return []
-  return []
+        with open(DATA_FILE, "r", encoding="utf-8") as arquivo:
+            registros = json.load(arquivo)
+    except (OSError, json.JSONDecodeError) as erro:
+        raise DadosInvalidosError("Não foi possível ler os dados salvos.") from erro
+
+    if not isinstance(registros, list) or any(
+        not isinstance(registro, dict) for registro in registros
+    ):
+        raise DadosInvalidosError("O arquivo de dados possui uma estrutura inválida.")
+    return registros
 
 
-def salvar_dados(dados):
-  with open(DATA_FILE, "w", encoding="utf-8") as f:
-    json.dump(dados, f, ensure_ascii=False, indent=4)
-
-
-def obter_data_expiracao(registro):
-  try:
-    data_registro = datetime.fromisoformat(str(registro["data_registro"]))
-    if data_registro.tzinfo is None:
-      data_registro = data_registro.replace(tzinfo=FUSO_BR)
-    else:
-      data_registro = data_registro.astimezone(FUSO_BR)
-    dias = int(registro["dias"])
-    if dias < 1:
-      return None
-    return data_registro + timedelta(days=dias)
-  except (KeyError, TypeError, ValueError, OverflowError):
-    return None
-
-
-def separar_registros_expirados(registros, agora=None):
-  agora = agora or datetime.now(FUSO_BR)
-  registros_ativos = []
-  expirados = []
-  for registro in registros:
-    data_expiracao = obter_data_expiracao(registro)
-    if data_expiracao is not None and data_expiracao <= agora:
-      expirados.append(registro)
-    else:
-      registros_ativos.append(registro)
-  return registros_ativos, expirados
-
-
-# Inicializa os dados na sessão
-if "registros" not in st.session_state:
-  st.session_state.registros = carregar_dados()
-
-# --- CABEÇALHO DO SISTEMA ---
-col_logo_esquerda, col_logo_centro, col_logo_direita = st.columns([1, 2, 1])
-with col_logo_centro:
-  st.image(preparar_logo_redonda("39147.jpg"), width=140)
-st.markdown(
-    "<h1 style='text-align: center; color: #0066FF; font-size: 1.4rem; "
-    "font-weight: 700; margin-top: -10px;'>Sistema de Gestão de Afastamentos</h1>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "<p style='text-align: center; color: #8b949e;'>Painel executivo para"
-    " controle operacional, conformidade de afastamentos e acolhimento.</p>",
-    unsafe_allow_html=True,
-)
-st.write("")
-
-# --- LAYOUT EM DUAS COLUNAS ---
-col_form, col_monitor = st.columns([1.2, 1.8], gap="large")
-
-with col_form:
-  st.markdown("### Registro de Ocorrência")
-
-  with st.form("form_afastamento", clear_on_submit=True):
-    matricula = st.text_input(
-        "Matrícula do Colaborador", placeholder="Ex: 997021"
-    )
-    nome = st.text_input("Nome do Colaborador", placeholder="Ex: Ricardo Silva")
-    produto = st.text_input(
-        "Produto / Produção", placeholder="Ex: Quem ama cuida"
-    )
-
-    modulo = st.selectbox(
-        "Módulo de Gravação / Cidade Cenográfica",
-        ["CC1", "CC2", "CC3", "Estúdios Globo", "Externa"],
-    )
-
-    dias_afastamento = st.number_input(
-        "Dias de Afastamento", min_value=1, max_value=90, value=1
-    )
-
-    classificacao = st.selectbox(
-        "Classificação da Ocorrência",
-        [
-            "Doença Comum",
-            "Acidente Doméstico",
-            "Acidente de Trabalho",
-            "Acolhimento Preventivo",
-        ],
-    )
-
-    submitted = st.form_submit_button("Salvar Registro")
-
-    if submitted:
-      matricula = matricula.strip()
-      nome = nome.strip()
-      produto = produto.strip()
-
-      if not matricula or not nome:
-        st.error("Preencha ao menos a Matrícula e o Nome do colaborador.")
-      elif any(len(valor) > MAX_TEXT_LENGTH for valor in (matricula, nome, produto)):
-        st.error(f"Os campos de texto devem ter no máximo {MAX_TEXT_LENGTH} caracteres.")
-      else:
-        novo_registro = {
-            "matricula": matricula,
-            "nome": nome,
-            "produto": produto,
-            "modulo": modulo,
-            "dias": dias_afastamento,
-            "classificacao": classificacao,
-            "data_registro": datetime.now(FUSO_BR).strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        try:
-          registros_atualizados = [*st.session_state.registros, novo_registro]
-          salvar_dados(registros_atualizados)
-          st.session_state.registros = registros_atualizados
-          st.success("Registro salvo com sucesso!")
-          st.rerun()
-        except (OSError, TypeError, ValueError):
-          st.error("Não foi possível salvar o registro. Tente novamente.")
-
-@st.fragment(run_every="60s")
-def renderizar_monitoramento():
-  registros_ativos, registros_expirados = separar_registros_expirados(
-      st.session_state.registros
-  )
-  falha_ao_remover_expirados = False
-  if registros_expirados:
+def salvar_registros(registros):
+    """Grava em arquivo temporário e substitui o JSON somente após sucesso."""
+    caminho_temporario = None
     try:
-      salvar_dados(registros_ativos)
-      st.session_state.registros = registros_ativos
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=BASEDIR,
+            prefix=".dados-",
+            suffix=".tmp",
+            delete=False,
+        ) as arquivo:
+            caminho_temporario = arquivo.name
+            json.dump(registros, arquivo, ensure_ascii=False, indent=2)
+            arquivo.flush()
+            os.fsync(arquivo.fileno())
+        os.replace(caminho_temporario, DATA_FILE)
     except OSError:
-      falha_ao_remover_expirados = True
+        if caminho_temporario and os.path.exists(caminho_temporario):
+            os.remove(caminho_temporario)
+        raise
 
-  st.markdown("### Monitoramento Ativo de Afastados")
-  if falha_ao_remover_expirados:
-    st.warning(
-        "Há registros vencidos, mas não foi possível atualizar o arquivo de dados."
-    )
 
-  # Filtro de visualização
-  filtro_modulo = st.selectbox(
-      "Filtrar Visualização por Módulo / Estúdio",
-      ["Visão Geral (Todos os Módulos e Cidades)"]
-      + [
-          "CC1",
-          "CC2",
-          "CC3",
-          "Estúdios Globo",
-          "Externa",
-      ],
-  )
+def obter_data_inicio(registro):
+    """Aceita o formato atual e os campos de data dos registros legados."""
+    valor_data = registro.get("data_inicio") or registro.get("data_registro")
+    if not valor_data:
+        raise ValueError("Registro sem data de início.")
+    return date.fromisoformat(str(valor_data)[:10])
 
-  registros = st.session_state.registros
 
-  if not registros:
-    st.info(
-        "Nenhum afastamento registrado no momento. Utilize o formulário ao lado"
-        " para incluir ocorrências."
-    )
-  else:
-    # Filtragem
-    if filtro_modulo != "Visão Geral (Todos os Módulos e Cidades)":
-      registros_filtrados = [
-          r for r in registros if r.get("modulo") == filtro_modulo
-      ]
-    else:
-      registros_filtrados = registros
+def classificar_status(dias_restantes):
+    if dias_restantes <= 0:
+        return "Encerrado", "status-closed"
+    if dias_restantes == 1:
+        return "Retorno em 1 dia", "status-one-day"
+    if dias_restantes == 2:
+        return "Retorno em 2 dias", "status-two-days"
+    if dias_restantes == 3:
+        return "Retorno em 3 dias", "status-three-days"
+    return "Retorno em 4 dias ou mais", "status-four-plus"
 
-    if not registros_filtrados:
-      st.warning(
-          f"Nenhum registro encontrado para o filtro: {filtro_modulo}."
-      )
-    else:
-      for reg in reversed(registros_filtrados):
-        # Cálculo de retorno
-        data_retorno = obter_data_expiracao(reg)
-        if data_retorno is None:
-          dias_restantes = 0
-        else:
-          dias_restantes = (data_retorno - datetime.now(FUSO_BR)).days
 
-        matricula_exibicao = html.escape(str(reg.get("matricula", "N/D")))
-        nome_exibicao = html.escape(str(reg.get("nome", "N/D")))
-        produto_exibicao = html.escape(str(reg.get("produto", "N/D")))
-        modulo_exibicao = html.escape(str(reg.get("modulo", "N/D")))
-        dias_exibicao = html.escape(str(reg.get("dias", "N/D")))
-        classificacao_exibicao = html.escape(str(reg.get("classificacao", "N/D")))
-        data_exibicao = html.escape(str(reg.get("data_registro", "N/D")))
+def obter_grupo_centro(centro_custo):
+    if centro_custo.startswith("MG1"):
+        return "MG1 ABCD"
+    if centro_custo.startswith("MG2"):
+        return "MG2 EF"
+    if centro_custo.startswith("MG3"):
+        return "MG3 HIJL"
+    if centro_custo.startswith("MG4"):
+        return "MG4 MKL"
+    return centro_custo if centro_custo in {"CC1", "CC2", "CC3"} else None
 
-        # Alerta visual baseado no prazo (mantendo apenas os dois ícones essenciais de status)
-        if dias_restantes <= 1:
-          status_msg = f"🚨 ALERTA CRÍTICO: {max(0, dias_restantes)} dia(s) restante(s). Amanhã o colaborador estará apto para retornar à escala!"
-          borda_cor = "border-left: 5px solid #ff4b4b;"
-        else:
-          status_msg = f"⚠️ ATENÇÃO: {dias_restantes} dias restantes para retorno à escala."
-          borda_cor = "border-left: 5px solid #ffa500;"
 
-        st.markdown(
-          f"""
-          <div style="background-color: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 15px; {borda_cor}">
-            <strong>Matrícula:</strong> {matricula_exibicao} | <strong>Colaborador:</strong> {nome_exibicao}<br>
-            <strong>Produto:</strong> {produto_exibicao} | <strong>Local:</strong> {modulo_exibicao}<br>
-            <strong>Tempo de Afastamento:</strong> {dias_exibicao} dia(s) | <strong>Classificação:</strong> {classificacao_exibicao}<br>
-            <div style="margin-top: 8px; font-weight: bold; color: #ffcccc;">{status_msg}</div>
-            <div style="font-size: 0.8rem; color: #8b949e; margin-top: 5px;">Registrado em: {data_exibicao} • Protocolo de Acolhimento Ativo (LGPD Compliant)</div>
-          </div>
-          """,
-          unsafe_allow_html=True,
+def preparar_registros(registros, hoje):
+    """Calcula previsão, prazo restante e alerta sem alterar os dados persistidos."""
+    preparados = []
+    for registro in registros:
+        try:
+            data_inicio = obter_data_inicio(registro)
+            dias = int(registro["dias"])
+            if dias < 1:
+                continue
+            data_termino = data_inicio + timedelta(days=dias)
+        except (KeyError, TypeError, ValueError, OverflowError):
+            continue
+
+        dias_restantes = (data_termino - hoje).days
+        status_texto, status_classe = classificar_status(dias_restantes)
+        preparados.append(
+            {
+                **registro,
+                "colaborador": registro.get("colaborador") or registro.get("nome", "N/D"),
+                "matricula": registro.get("matricula", "N/D"),
+                "produto": registro.get("produto") or registro.get("producao", "N/D"),
+                "centro_custo": (
+                    registro.get("centro_custo")
+                    or registro.get("estudio")
+                    or registro.get("modulo_gravacao")
+                    or registro.get("modulo", "N/D")
+                ),
+                "tipo_afastamento": registro.get("tipo_afastamento")
+                or registro.get("tipo", "N/D"),
+                "data_inicio_exibicao": data_inicio.strftime("%d/%m/%Y"),
+                "data_inicio_form": data_inicio.isoformat(),
+                "data_termino_exibicao": data_termino.strftime("%d/%m/%Y"),
+                "dias_restantes": dias_restantes,
+                "status_texto": status_texto,
+                "status_classe": status_classe,
+            }
         )
 
+    return sorted(preparados, key=obter_data_inicio, reverse=True)
 
-with col_monitor:
-  renderizar_monitoramento()
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    erro_login = None
+    if request.method == "POST":
+        usuario = request.form.get("usuario", "")
+        senha = request.form.get("senha", "")
+        if usuario == "ADM" and senha == "8920":
+            session.clear()
+            session["autenticado"] = True
+            return redirect(url_for("index"))
+        erro_login = "Usuário ou senha incorretos."
+    return render_template("login.html", erro_login=erro_login)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/", methods=["GET"])
+@requer_autenticacao
+def index():
+    agora = datetime.now(FUSO_RIO)
+    erro_dados = None
+    try:
+        registros = carregar_registros()
+    except DadosInvalidosError:
+        registros = []
+        erro_dados = "Não foi possível ler os registros. O arquivo de dados foi preservado."
+
+    afastamentos = [
+        registro
+        for registro in preparar_registros(registros, agora.date())
+        if registro["dias_restantes"] > 0
+    ]
+    afastamentos.sort(
+        key=lambda registro: (
+            registro["dias_restantes"],
+            registro["colaborador"].casefold(),
+            registro["colaborador"],
+        )
+    )
+    registro_edicao_id = request.args.get("editar")
+    registro_edicao = next(
+        (
+            registro
+            for registro in afastamentos
+            if str(registro.get("id", "")) == registro_edicao_id
+        ),
+        None,
+    )
+    mensagens = {
+        "salvo": ("success", "Afastamento registrado com sucesso."),
+        "atualizado": ("success", "Afastamento atualizado com sucesso."),
+        "excluido": ("success", "Afastamento excluído com sucesso."),
+        "nao_encontrado": ("error", "O registro não foi encontrado."),
+        "invalido": ("error", "Confira os campos obrigatórios e as opções selecionadas."),
+        "falha": ("error", "Não foi possível salvar o registro. Os dados anteriores foram preservados."),
+    }
+    resultado = request.args.get("resultado")
+    mensagem = mensagens.get(resultado)
+
+    return render_template(
+        "index.html",
+        data_atual=agora.strftime("%d/%m/%Y %H:%M:%S"),
+        afastamentos=afastamentos,
+        registro_edicao=registro_edicao,
+        centros_custo=CENTROS_CUSTO,
+        alocacoes=ALOCACOES,
+        tipos_afastamento=TIPOS_AFASTAMENTO,
+        contagens_centros={
+            centro: sum(
+                obter_grupo_centro(registro["centro_custo"]) == centro
+                for registro in afastamentos
+            )
+            for centro in CENTROS_CUSTO
+        },
+        mensagem=mensagem,
+        erro_dados=erro_dados,
+    )
+
+
+@app.route("/excluir/<registro_id>", methods=["POST"])
+@requer_autenticacao
+def excluir(registro_id):
+    try:
+        registros = carregar_registros()
+    except DadosInvalidosError:
+        return redirect(url_for("index", resultado="falha"))
+
+    indice = next(
+        (
+            indice
+            for indice, registro in enumerate(registros)
+            if str(registro.get("id", "")) == registro_id
+        ),
+        None,
+    )
+    if indice is None:
+        return redirect(url_for("index", resultado="nao_encontrado"))
+
+    registros.pop(indice)
+    try:
+        salvar_registros(registros)
+    except OSError:
+        return redirect(url_for("index", resultado="falha"))
+
+    return redirect(url_for("index", resultado="excluido"))
+
+
+@app.route("/atualizar/<registro_id>", methods=["POST"])
+@requer_autenticacao
+def atualizar(registro_id):
+    colaborador = request.form.get("colaborador", "").strip()
+    matricula = request.form.get("matricula", "").strip()
+    produto = request.form.get("produto", "").strip()
+    centro_custo = request.form.get("centro_custo", "")
+    tipo_afastamento = request.form.get("tipo_afastamento", "")
+    data_inicio_texto = request.form.get("data_inicio", "")
+
+    try:
+        dias = int(request.form.get("dias", ""))
+        data_inicio = date.fromisoformat(data_inicio_texto)
+    except (TypeError, ValueError):
+        return redirect(url_for("index", resultado="invalido"))
+
+    if (
+        not colaborador
+        or len(colaborador) > 200
+        or not matricula
+        or len(matricula) > 50
+        or not produto
+        or len(produto) > 200
+        or centro_custo not in ALOCACOES
+        or tipo_afastamento not in TIPOS_AFASTAMENTO
+        or not 1 <= dias <= 3650
+    ):
+        return redirect(url_for("index", resultado="invalido"))
+
+    try:
+        registros = carregar_registros()
+        registro = next(
+            (item for item in registros if str(item.get("id", "")) == registro_id),
+            None,
+        )
+        if registro is None:
+            return redirect(url_for("index", resultado="nao_encontrado"))
+        registro.update(
+            {
+                "colaborador": colaborador,
+                "matricula": matricula,
+                "produto": produto,
+                "centro_custo": centro_custo,
+                "tipo_afastamento": tipo_afastamento,
+                "dias": dias,
+                "data_inicio": data_inicio.isoformat(),
+            }
+        )
+        salvar_registros(registros)
+    except (DadosInvalidosError, OSError):
+        return redirect(url_for("index", resultado="falha"))
+
+    return redirect(url_for("index", resultado="atualizado"))
+
+
+@app.route("/calcular", methods=["POST"])
+@requer_autenticacao
+def calcular():
+    colaborador = request.form.get("colaborador", "").strip()
+    matricula = request.form.get("matricula", "").strip()
+    produto = request.form.get("produto", "").strip()
+    centro_custo = request.form.get("centro_custo", "")
+    tipo_afastamento = request.form.get("tipo_afastamento", "")
+    data_inicio_texto = request.form.get("data_inicio", "")
+
+    try:
+        dias = int(request.form.get("dias", ""))
+        data_inicio = date.fromisoformat(data_inicio_texto)
+    except (TypeError, ValueError):
+        return redirect(url_for("index", resultado="invalido"))
+
+    if (
+        not colaborador
+        or len(colaborador) > 200
+        or not matricula
+        or len(matricula) > 50
+        or not produto
+        or len(produto) > 200
+        or centro_custo not in ALOCACOES
+        or tipo_afastamento not in TIPOS_AFASTAMENTO
+        or not 1 <= dias <= 3650
+    ):
+        return redirect(url_for("index", resultado="invalido"))
+
+    novo_registro = {
+        "id": uuid.uuid4().hex,
+        "colaborador": colaborador,
+        "matricula": matricula,
+        "produto": produto,
+        "centro_custo": centro_custo,
+        "tipo_afastamento": tipo_afastamento,
+        "dias": dias,
+        "data_inicio": data_inicio.isoformat(),
+        "criado_em": datetime.now(FUSO_RIO).isoformat(),
+    }
+
+    try:
+        registros = carregar_registros()
+        salvar_registros([*registros, novo_registro])
+    except (DadosInvalidosError, OSError):
+        return redirect(url_for("index", resultado="falha"))
+
+    return redirect(url_for("index", resultado="salvo"))
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=int(os.environ.get("PORT", 5000)))

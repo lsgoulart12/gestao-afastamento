@@ -1,57 +1,131 @@
 [
-    {
-        "id": "20260920150113381961",
-        "matricula": "997020",
-        "nome": "Lais Goulart",
-        "produto": "Quem ama cuida",
-        "modulo_gravacao": "MG1",
-        "estudio": "MG1 - Estudio C",
-        "dias": 3,
-        "tipo": "Doenca Comum",
-        "data_registro": "2026-09-20 15:01:13"
-    },
-    {
-        "id": "20260920150310146775",
-        "matricula": "997022",
-        "nome": "Gleice Kelly",
-        "produto": "Por voce",
-        "modulo_gravacao": "MG1",
-        "estudio": "MG1 - Estudio B",
-        "dias": 2,
-        "tipo": "Acidente de Trabalho",
-        "data_registro": "2026-09-20 15:03:10"
-    },
-    {
-        "id": "20260920150430044258",
-        "matricula": "997023",
-        "nome": "Gilberto Souza",
-        "produto": "Nossa Terra",
-        "modulo_gravacao": "MG1",
-        "estudio": "MG1 - Estudio D",
-        "dias": 3,
-        "tipo": "Acidente Domestico",
-        "data_registro": "2026-09-20 15:04:30"
-    },
-    {
-        "id": "20260920150503765174",
-        "matricula": "997024",
-        "nome": "Paulo Henrique",
-        "produto": "Nossa Terra",
-        "modulo_gravacao": "MG1",
-        "estudio": "MG1 - Estudio D",
-        "dias": 2,
-        "tipo": "Doenca Comum",
-        "data_registro": "2026-09-20 15:05:03"
-    },
-    {
-        "id": "20260920155130110219",
-        "matricula": "997030",
-        "nome": "sergio antonio",
-        "produto": "roubo do cão",
-        "modulo_gravacao": "MG3",
-        "estudio": "estudio H",
-        "dias": 2,
-        "tipo": "Doenca Comum",
-        "data_registro": "2026-09-20 15:51:30"
-    }
+  {
+    "id": "20260920150113381961",
+    "matricula": "997020",
+    "nome": "Lais Goulart",
+    "produto": "Quem ama cuida",
+    "modulo_gravacao": "MG1",
+    "estudio": "MG1 - Estudio C",
+    "dias": 3,
+    "tipo": "Doenca Comum",
+    "data_registro": "2026-09-20 15:01:13"
+  },
+  {
+    "id": "20260920150310146775",
+    "matricula": "997022",
+    "nome": "Gleice Kelly",
+    "produto": "Por voce",
+    "modulo_gravacao": "MG1",
+    "estudio": "MG1 - Estudio B",
+    "dias": 2,
+    "tipo": "Acidente de Trabalho",
+    "data_registro": "2026-09-20 15:03:10"
+  },
+  {
+    "id": "20260920150430044258",
+    "matricula": "997023",
+    "nome": "Gilberto Souza",
+    "produto": "Nossa Terra",
+    "modulo_gravacao": "MG1",
+    "estudio": "MG1 - Estudio D",
+    "dias": 3,
+    "tipo": "Acidente Domestico",
+    "data_registro": "2026-09-20 15:04:30"
+  },
+  {
+    "id": "20260920150503765174",
+    "matricula": "997024",
+    "nome": "Paulo Henrique",
+    "produto": "Nossa Terra",
+    "modulo_gravacao": "MG1",
+    "estudio": "MG1 - Estudio D",
+    "dias": 2,
+    "tipo": "Doenca Comum",
+    "data_registro": "2026-09-20 15:05:03"
+  },
+  {
+    "id": "20260920155130110219",
+    "matricula": "997030",
+    "nome": "sergio antonio",
+    "produto": "roubo do cão",
+    "modulo_gravacao": "MG3",
+    "estudio": "estudio H",
+    "dias": 2,
+    "tipo": "Doenca Comum",
+    "data_registro": "2026-09-20 15:51:30"
+  },
+  {
+    "id": "7b6c9af7cc23459d85015655f4fa4cfe",
+    "colaborador": "Davi Soares",
+    "centro_custo": "CC1",
+    "tipo_afastamento": "Atestado médico",
+    "dias": 7,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:08:26.165359-03:00"
+  },
+  {
+    "id": "6a60b7e0a922453c901c7ac39cf49ae7",
+    "colaborador": "Matheus Fontes",
+    "centro_custo": "MG4 - Estúdio L",
+    "tipo_afastamento": "Atestado médico",
+    "dias": 1,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:16:57.484954-03:00",
+    "matricula": "997030",
+    "produto": "XX"
+  },
+  {
+    "id": "d87043224a6d4d8e9120bcab38b4f329",
+    "colaborador": "Valeria Rocha",
+    "matricula": "997023",
+    "centro_custo": "MG1 - Estúdio B",
+    "tipo_afastamento": "Atestado médico",
+    "dias": 8,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:27:45.726833-03:00"
+  },
+  {
+    "id": "3d076e7fb4dd43519f3783c7ceb5446e",
+    "colaborador": "Lais Goulart",
+    "matricula": "997020",
+    "produto": "Quem ama cuida",
+    "centro_custo": "MG1 - Estúdio C",
+    "tipo_afastamento": "Atestado médico",
+    "dias": 2,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:39:43.459159-03:00"
+  },
+  {
+    "id": "ce6e2f73c75c440389d78abad51a3ee2",
+    "colaborador": "Dario Almeida",
+    "matricula": "997024",
+    "produto": "nobreza do amor",
+    "centro_custo": "MG1 - Estúdio A",
+    "tipo_afastamento": "Atestado médico",
+    "dias": 13,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:40:26.216580-03:00"
+  },
+  {
+    "id": "8f8ef3e317254d92ba7967f625090b63",
+    "colaborador": "Deise moreira",
+    "matricula": "997029",
+    "produto": "Por voce",
+    "centro_custo": "MG1 - Estúdio B",
+    "tipo_afastamento": "Atestado médico",
+    "dias": 3,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:41:28.326455-03:00"
+  },
+  {
+    "id": "32267e269b8c4edebeea13943b3fc7d0",
+    "colaborador": "Herique Vale",
+    "matricula": "997030",
+    "produto": "Nossa terra",
+    "centro_custo": "MG1 - Estúdio D",
+    "tipo_afastamento": "Licença paternidade",
+    "dias": 5,
+    "data_inicio": "2026-09-27",
+    "criado_em": "2026-09-27T15:43:16.478578-03:00"
+  }
 ]

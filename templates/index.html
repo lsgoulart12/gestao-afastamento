@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Painel interno de controle operacional de afastamentos.">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Controle de Afastamentos">
+    <title>Controle Operacional de Afastamentos</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logomarca.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='logomarca.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="page-shell">
+        <header class="masthead">
+            <div class="brand-lockup">
+                <div class="logo-box">
+                    <img src="{{ url_for('static', filename='logomarca.png') }}" alt="Logomarca corporativa">
+                </div>
+                <div>
+                    <p class="eyebrow">OPERAÇÕES · PESSOAS</p>
+                    <h1>Controle de Afastamentos</h1>
+                </div>
+            </div>
+            <div class="clock-block">
+                <span class="clock-label">HORÁRIO DO RIO DE JANEIRO</span>
+                <time>{{ data_atual }}</time>
+                <form action="{{ url_for('logout') }}" method="POST" class="logout-form">
+                    <button type="submit" class="logout-button">Sair</button>
+                </form>
+            </div>
+        </header>
+
+        {% if erro_dados %}
+        <div class="notice notice-error" role="alert">{{ erro_dados }}</div>
+        {% endif %}
+        {% if mensagem %}
+        <div class="notice notice-{{ mensagem[0] }}" role="status">{{ mensagem[1] }}</div>
+        {% endif %}
+
+        <section class="allocation-section" aria-labelledby="allocation-title">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">DISTRIBUIÇÃO OPERACIONAL</p>
+                    <h2 id="allocation-title">Centros de custo e alocação</h2>
+                </div>
+                <span class="section-meta">{{ afastamentos|length }} {% if afastamentos|length == 1 %}registro{% else %}registros{% endif %}</span>
+            </div>
+            <div class="allocation-grid">
+                {% for centro in centros_custo %}
+                <article class="allocation-card">
+                    <span class="allocation-name">{{ centro }}</span>
+                    <span class="allocation-count">{{ contagens_centros[centro] }} {% if contagens_centros[centro] == 1 %}ativo{% else %}ativos{% endif %}</span>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="workspace-grid">
+            <section class="panel form-panel" aria-labelledby="form-title">
+                <div class="section-heading compact-heading">
+                    <div>
+                        <p class="eyebrow">NOVO REGISTRO</p>
+                        <h2 id="form-title">{{ 'Editar afastamento' if registro_edicao else 'Registrar afastamento' }}</h2>
+                    </div>
+                </div>
+                <form action="{{ url_for('atualizar', registro_id=registro_edicao.id) if registro_edicao else url_for('calcular') }}" method="POST" class="absence-form">
+                    <div class="form-group">
+                        <label for="colaborador">Nome do colaborador</label>
+                        <input type="text" id="colaborador" name="colaborador" maxlength="200" required placeholder="Nome completo" value="{{ registro_edicao.colaborador if registro_edicao else '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="matricula">Matrícula do colaborador</label>
+                        <input type="text" id="matricula" name="matricula" maxlength="50" required placeholder="Digite a matrícula" value="{{ registro_edicao.matricula if registro_edicao and registro_edicao.matricula != 'N/D' else '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="produto">Produto / Produção</label>
+                        <input type="text" id="produto" name="produto" maxlength="200" required placeholder="Ex.: Nome da Produção / Projeto" value="{{ registro_edicao.produto if registro_edicao and registro_edicao.produto != 'N/D' else '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="centro_custo">Centro de custo / alocação</label>
+                        <select id="centro_custo" name="centro_custo" required>
+                            {% for centro in alocacoes %}
+                            <option value="{{ centro }}" {% if registro_edicao and registro_edicao.centro_custo == centro %}selected{% endif %}>{{ centro }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tipo_afastamento">Tipo de afastamento</label>
+                        <select id="tipo_afastamento" name="tipo_afastamento" required>
+                            {% for tipo in tipos_afastamento %}
+                            <option value="{{ tipo }}" {% if registro_edicao and registro_edicao.tipo_afastamento == tipo %}selected{% endif %}>{{ tipo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dias">Quantidade de dias</label>
+                            <input type="number" id="dias" name="dias" min="1" max="3650" required placeholder="Ex.: 5" value="{{ registro_edicao.dias if registro_edicao else '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="data_inicio">Data de início</label>
+                            <input type="date" id="data_inicio" name="data_inicio" required value="{{ registro_edicao.data_inicio_form if registro_edicao else '' }}">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-button">{{ 'Salvar alterações' if registro_edicao else 'Registrar afastamento' }} <span aria-hidden="true">→</span></button>
+                    {% if registro_edicao %}
+                    <a class="cancel-edit" href="{{ url_for('index') }}">Cancelar edição</a>
+                    {% endif %}
+                </form>
+            </section>
+
+            <section class="panel monitor-panel" aria-labelledby="monitor-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">ACOMPANHAMENTO DIÁRIO</p>
+                        <h2 id="monitor-title">Alertas de retorno</h2>
+                    </div>
+                    <span class="live-indicator"><span></span> ATIVO</span>
+                </div>
+
+                {% if afastamentos %}
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Colaborador</th>
+                                <th scope="col">Centro de custo</th>
+                                <th scope="col">Início</th>
+                                <th scope="col">Término previsto</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for registro in afastamentos %}
+                            <tr>
+                                <td data-label="Colaborador">
+                                    <span class="person-name">{{ registro.colaborador }}</span>
+                                    <span class="person-detail">Matrícula: {{ registro.matricula }}</span>
+                                    <span class="person-detail product-detail">Produto: {{ registro.produto }}</span>
+                                    <span class="person-detail">{{ registro.tipo_afastamento }}</span>
+                                </td>
+                                <td data-label="Centro de custo"><span class="cost-center-tag">{{ registro.centro_custo }}</span></td>
+                                <td data-label="Início">{{ registro.data_inicio_exibicao }}</td>
+                                <td data-label="Término previsto">{{ registro.data_termino_exibicao }}</td>
+                                <td data-label="Status"><span class="status-badge {{ registro.status_classe }}">{{ registro.status_texto }}</span></td>
+                                <td data-label="Ações">
+                                    <div class="row-actions">
+                                        <a class="edit-action" href="{{ url_for('index', editar=registro.id) }}">Editar</a>
+                                        <form action="{{ url_for('excluir', registro_id=registro.id) }}" method="POST" onsubmit="return confirm('Confirma a exclusão deste afastamento?');">
+                                            <button type="submit" class="delete-action">Excluir</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <span class="empty-mark" aria-hidden="true">—</span>
+                    <h3>Nenhum afastamento registrado</h3>
+                    <p>Os novos registros aparecerão aqui para acompanhamento operacional.</p>
+                </div>
+                {% endif %}
+            </section>
+        </div>
+        <footer class="page-footer">Controle interno de afastamentos <span>·</span> Atualizado no horário oficial do Rio de Janeiro</footer>
+    </main>
+</body>
+</html>
