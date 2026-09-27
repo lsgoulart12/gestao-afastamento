@@ -4,6 +4,10 @@ import os
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageOps
 import streamlit as st
+from zoneinfo import ZoneInfo
+
+
+FUSO_BR = ZoneInfo("America/Sao_Paulo")
 
 
 def preparar_logo_redonda(caminho_imagem, tamanho=(180, 180)):
@@ -32,10 +36,10 @@ tema = st.sidebar.radio("Tema", ["Claro", "Escuro"], index=1 if st.session_state
 st.session_state.tema = tema
 
 if tema == "Escuro":
-  tema_background = "#0e1117"
-  tema_surface = "#161b22"
-  tema_text = "#ffffff"
-  tema_border = "#30363d"
+  tema_background = "#0f172a"
+  tema_surface = "rgba(15, 23, 42, 0.85)"
+  tema_text = "#f8fafc"
+  tema_border = "#334155"
 else:
   tema_background = "#f8fafc"
   tema_surface = "#ffffff"
@@ -49,6 +53,9 @@ st.markdown(
         --background-color: {tema_background};
         --secondary-background-color: {tema_surface};
         --text-color: {tema_text};
+      --accent-color: #2563eb;
+      --border-color: {tema_border};
+      --form-surface: {tema_surface};
       --form-background: #ffffff;
       --form-text: #000000;
       --form-placeholder: #555555;
@@ -243,6 +250,37 @@ st.markdown(
   div[data-baseweb="select"] span {{
     color: {tema_text} !important;
   }}
+
+  .stApp {{
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }}
+
+  div[data-testid="stForm"] {{
+    background: var(--form-surface);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+  }}
+
+  h1, h2 {{
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+  }}
+
+  [data-testid="stFormSubmitButton"] button {{
+    background-color: var(--accent-color) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+  }}
+
+  [data-testid="stFormSubmitButton"] button:hover {{
+    background-color: #1d4ed8 !important;
+  }}
   </style>
   """,
   unsafe_allow_html=True,
@@ -269,6 +307,34 @@ def carregar_dados():
 def salvar_dados(dados):
   with open(DATA_FILE, "w", encoding="utf-8") as f:
     json.dump(dados, f, ensure_ascii=False, indent=4)
+
+
+def obter_data_expiracao(registro):
+  try:
+    data_registro = datetime.fromisoformat(str(registro["data_registro"]))
+    if data_registro.tzinfo is None:
+      data_registro = data_registro.replace(tzinfo=FUSO_BR)
+    else:
+      data_registro = data_registro.astimezone(FUSO_BR)
+    dias = int(registro["dias"])
+    if dias < 1:
+      return None
+    return data_registro + timedelta(days=dias)
+  except (KeyError, TypeError, ValueError, OverflowError):
+    return None
+
+
+def separar_registros_expirados(registros, agora=None):
+  agora = agora or datetime.now(FUSO_BR)
+  registros_ativos = []
+  expirados = []
+  for registro in registros:
+    data_expiracao = obter_data_expiracao(registro)
+    if data_expiracao is not None and data_expiracao <= agora:
+      expirados.append(registro)
+    else:
+      registros_ativos.append(registro)
+  return registros_ativos, expirados
 
 
 # Inicializa os dados na sessão
@@ -344,7 +410,7 @@ with col_form:
             "modulo": modulo,
             "dias": dias_afastamento,
             "classificacao": classificacao,
-            "data_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "data_registro": datetime.now(FUSO_BR).strftime("%Y-%m-%d %H:%M:%S"),
         }
         try:
           registros_atualizados = [*st.session_state.registros, novo_registro]
@@ -355,8 +421,24 @@ with col_form:
         except (OSError, TypeError, ValueError):
           st.error("Não foi possível salvar o registro. Tente novamente.")
 
-with col_monitor:
+@st.fragment(run_every="60s")
+def renderizar_monitoramento():
+  registros_ativos, registros_expirados = separar_registros_expirados(
+      st.session_state.registros
+  )
+  falha_ao_remover_expirados = False
+  if registros_expirados:
+    try:
+      salvar_dados(registros_ativos)
+      st.session_state.registros = registros_ativos
+    except OSError:
+      falha_ao_remover_expirados = True
+
   st.markdown("### Monitoramento Ativo de Afastados")
+  if falha_ao_remover_expirados:
+    st.warning(
+        "Há registros vencidos, mas não foi possível atualizar o arquivo de dados."
+    )
 
   # Filtro de visualização
   filtro_modulo = st.selectbox(
@@ -394,13 +476,11 @@ with col_monitor:
     else:
       for reg in reversed(registros_filtrados):
         # Cálculo de retorno
-        try:
-          data_reg = datetime.strptime(str(reg["data_registro"]), "%Y-%m-%d %H:%M:%S")
-          dias_af = int(reg["dias"])
-          data_retorno = data_reg + timedelta(days=dias_af)
-          dias_restantes = (data_retorno - datetime.now()).days
-        except (KeyError, TypeError, ValueError, OverflowError):
+        data_retorno = obter_data_expiracao(reg)
+        if data_retorno is None:
           dias_restantes = 0
+        else:
+          dias_restantes = (data_retorno - datetime.now(FUSO_BR)).days
 
         matricula_exibicao = html.escape(str(reg.get("matricula", "N/D")))
         nome_exibicao = html.escape(str(reg.get("nome", "N/D")))
@@ -419,14 +499,18 @@ with col_monitor:
           borda_cor = "border-left: 5px solid #ffa500;"
 
         st.markdown(
-            f"""
-            <div style="background-color: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 15px; {borda_cor}">
-                <strong>Matrícula:</strong> {matricula_exibicao} | <strong>Colaborador:</strong> {nome_exibicao}<br>
-                <strong>Produto:</strong> {produto_exibicao} | <strong>Local:</strong> {modulo_exibicao}<br>
-                <strong>Tempo de Afastamento:</strong> {dias_exibicao} dia(s) | <strong>Classificação:</strong> {classificacao_exibicao}<br>
-                <div style="margin-top: 8px; font-weight: bold; color: #ffcccc;">{status_msg}</div>
-                <div style="font-size: 0.8rem; color: #8b949e; margin-top: 5px;">Registrado em: {data_exibicao} • Protocolo de Acolhimento Ativo (LGPD Compliant)</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+          f"""
+          <div style="background-color: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 15px; {borda_cor}">
+            <strong>Matrícula:</strong> {matricula_exibicao} | <strong>Colaborador:</strong> {nome_exibicao}<br>
+            <strong>Produto:</strong> {produto_exibicao} | <strong>Local:</strong> {modulo_exibicao}<br>
+            <strong>Tempo de Afastamento:</strong> {dias_exibicao} dia(s) | <strong>Classificação:</strong> {classificacao_exibicao}<br>
+            <div style="margin-top: 8px; font-weight: bold; color: #ffcccc;">{status_msg}</div>
+            <div style="font-size: 0.8rem; color: #8b949e; margin-top: 5px;">Registrado em: {data_exibicao} • Protocolo de Acolhimento Ativo (LGPD Compliant)</div>
+          </div>
+          """,
+          unsafe_allow_html=True,
         )
+
+
+with col_monitor:
+  renderizar_monitoramento()
